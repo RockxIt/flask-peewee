@@ -133,13 +133,14 @@ class RestResource(object):
     # delete behavior
     delete_recursive = True
 
-    def __init__(self, rest_api, model, authentication, allowed_methods=None):
+    def __init__(self, rest_api, model, authentication, allowed_methods=None, route=None):
         self.api = rest_api
         self.model = model
         self.pk = model._meta.primary_key
 
         self.authentication = authentication
         self.allowed_methods = allowed_methods or ['GET', 'POST', 'PUT', 'DELETE']
+        self.route = route or self.model.__name__
 
         self._fields = {self.model: self.fields or self.model._meta.get_field_names()}
         if self.exclude:
@@ -174,7 +175,7 @@ class RestResource(object):
         return self.authentication.authorize()
 
     def get_api_name(self):
-        return slugify(self.model.__name__)
+        return slugify(self.route)
 
     def get_url_name(self, name):
         return '%s.%s_%s' % (
@@ -482,8 +483,10 @@ class RestAPI(object):
 
         self.default_auth = default_auth or Authentication()
 
-    def register(self, model, provider=RestResource, auth=None, allowed_methods=None):
-        self._registry[model] = provider(self, model, auth or self.default_auth, allowed_methods)
+    def register(self, model, provider=RestResource, auth=None, allowed_methods=None, route=None):
+        if route == None:
+            route = model.__name__
+        self._registry[route] = provider(self, model, auth or self.default_auth, allowed_methods, route)
 
     def unregister(self, model):
         del(self._registry[model])
